@@ -1,0 +1,50 @@
+version: "3"
+services:
+  piwigo:
+    image: linuxserver/piwigo
+    container_name: piwigo
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TIME_ZONE
+    volumes:
+      - $STACK_DATA/app:/config
+    networks:
+      - webapp
+      - piwigo
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.piwigo.rule=Host(`photos.${DOMAIN}`)"
+      - "traefik.http.routers.piwigo.entrypoints=websecure"
+      - "traefik.http.routers.piwigo.tls.certresolver=leresolver"
+      - "traefik.http.middlewares.piwigoHeaders.headers.contentSecurityPolicy=default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+      - "traefik.http.middlewares.piwigoHeaders.headers.framedeny=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.sslredirect=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.stsPreload=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.piwigoHeaders.headers.stsSeconds=31536000"
+      - "traefik.http.routers.piwigo.middlewares=piwigoHeaders"
+    restart: unless-stopped
+  piwigo_db:
+    image: linuxserver/mariadb
+    container_name: piwigo_db
+    networks:
+      - piwigo
+    environment:
+      - PUID=$PUID
+      - PGID=$PUID
+      - MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+      - TZ=$TIME_ZONE
+      - MYSQL_DATABASE=piwigo
+      - MYSQL_USER=piwigo
+      - MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD
+    volumes:
+      - $STACK_DATA/db:/config
+    restart: unless-stopped
+networks:
+  piwigo:
+  webapp:
+    external:
+      name: 'webapp'
